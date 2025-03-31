@@ -17,7 +17,7 @@ A Django-based web application for physicians to manage patient prescriptions, m
 
 - **Backend**: Django 5.1, Django REST Framework
 - **Frontend**: HTML5, Bootstrap 5, jQuery, Select2
-- **Database**: SQLite (Development), PostgreSQL (Production-ready)
+- **Database**: SQLite
 - **APIs**: RESTful endpoints for mobile/third-party integration
 
 ## API Endpoints
