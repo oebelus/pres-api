@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}Patients{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col">
+        <h2>Patient List</h2>
+        <a href="{% url 'patient-create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Add New Patient
+        </a>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for patient in patients %}
+                <tr>
+                    <td>{{ patient.id }}</td>
+                    <td>{{ patient.first_name }} {{ patient.last_name }}</td>
+                    <td>{{ patient.email }}</td>
+                    <td>{{ patient.phone }}</td>
+                    <td>
+                        <a href="{% url 'patient-retrieve' patient.id %}" class="btn btn-info btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}Create New Prescription{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .medication-item {
+        background: #f8f9fa;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .remove-medication {
+        cursor: pointer;
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Create New Prescription</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="prescription-form">
+                        {% csrf_token %}
+
+                        <!-- Patient Selection -->
+                        <div class="mb-4">
+                            <h5>Patient Information</h5>
+                            <div class="mb-3">
+                                {{ form.patient.label_tag }}
+                                {{ form.patient }}
+                                {% if form.patient.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.patient.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Medications Section -->
+                        <div class="mb-4">
+                            <h5>Medications</h5>
+                            <div id="medications-container">
+                                <!-- Medications will be added here dynamically -->
+                            </div>
+
+                            <!-- Add Medication Form -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Search Medication</label>
+                                            <select class="form-select medication-search" id="medication-search">
+                                                <option></option>
+                                                {% for med in medications %}
+                                                <option value="{{ med.id }}">{{ med.name }} ({{ med.dosage }}{{
+                                                    med.unity }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Dosage Instructions</label>
+                                            <input type="text" class="form-control" id="dosage-instruction"
+                                                placeholder="Take 1 tablet daily">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Duration (days)</label>
+                                            <input type="number" class="form-control" id="duration-days" min="1"
+                                                value="7">
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary mt-3" id="add-medication">
+                                        <i class="bi bi-plus-circle"></i> Add Medication
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-4">
+                            <h5>Additional Notes</h5>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.notes.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Prescription
+                            </button>
+                            <a href="{% url 'prescription-list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden template for new medications -->
+<div id="medication-template" class="d-none">
+    <div class="medication-item">
+        <input type="hidden" name="medications[]" class="medication-id">
+        <input type="hidden" name="dosage_instructions[]" class="dosage-instruction">
+        <input type="hidden" name="duration_days[]" class="duration-days">
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0 medication-name"></h6>
+            <span class="remove-medication"><i class="bi bi-trash"></i></span>
+        </div>
+        <div class="medication-details"></div>
+        <div class="text-muted medication-instruction"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Initialize Select2 for medication search
+        $('.medication-search').select2({
+            placeholder: "Search for medication...",
+            allowClear: true
+        });
+
+        // Add medication to the list
+        $('#add-medication').click(function () {
+            const medicationId = $('#medication-search').val();
+            const medicationName = $('#medication-search option:selected').text();
+            const dosageInstruction = $('#dosage-instruction').val();
+            const durationDays = $('#duration-days').val();
+
+            if (!medicationId) {
+                alert('Please select a medication');
+                return;
+            }
+
+            // Create new medication item from template
+            const newItem = $('#medication-template').clone().removeClass('d-none').removeAttr('id');
+
+            // Populate data
+            newItem.find('.medication-id').val(medicationId);
+            newItem.find('.medication-name').text(medicationName);
+            newItem.find('.dosage-instruction').val(dosageInstruction);
+            newItem.find('.duration-days').val(durationDays);
+            newItem.find('.medication-instruction').text(dosageInstruction + ' for ' + durationDays + ' days');
+
+            // Add remove functionality
+            newItem.find('.remove-medication').click(function () {
+                $(this).closest('.medication-item').remove();
+            });
+
+            // Add to container
+            $('#medications-container').append(newItem);
+
+            // Clear form
+            $('#medication-search').val(null).trigger('change');
+            $('#dosage-instruction').val('');
+            $('#duration-days').val('7');
+        });
+
+        // Form submission
+        $('#prescription-form').submit(function () {
+            if ($('#medications-container').children().length === 0) {
+                alert('Please add at least one medication');
+                return false;
+            }
+            return true;
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Details{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2>Patient Details</h2>
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ patient.first_name }} {{ patient.last_name }}</h5>
+                <p class="card-text">
+                    <strong>Email:</strong> {{ patient.email }}<br>
+                    <strong>Phone:</strong> {{ patient.phone }}<br>
+                    <strong>Birthday:</strong> {{ patient.birthday }}<br>
+                    <strong>Gender:</strong> {{ patient.gender }}<br>
+                    <strong>Weight:</strong> {{ patient.weight }} kg
+                </p>
+                <a href="{% url 'patient-list-create' %}" class="btn btn-secondary">Back to List</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

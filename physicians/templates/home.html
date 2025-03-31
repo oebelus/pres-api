@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Medical Prescription System{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if user.is_authenticated %}
+    <!-- Physician Dashboard -->
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Welcome, Dr. {{ user.last_name }}</h2>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Active Prescriptions</h5>
+                    <h3 class="display-5 text-success">
+                        {{ active_prescriptions_count }}
+                    </h3>
+                    <a href="{% url 'prescription-list' %}" class="btn btn-sm btn-outline-success mt-2">Manage</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Medications Available</h5>
+                    <h3 class="display-5 text-info">
+                        {{ medication_count }}
+                    </h3>
+                    <a href="{% url 'medication-list' %}" class="btn btn-sm btn-outline-info mt-2">Browse</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Patients -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Recent Patients</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for patient in recent_patients %}
+                        <a href="{% url 'patient-detail' patient.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ patient.first_name }} {{ patient.last_name }}</h6>
+                                <small>{{ patient.created_at|timesince }} ago</small>
+                            </div>
+                            <p class="mb-1">Age: {{ patient.age }} • {{ patient.gender }}</p>
+                        </a>
+                        {% empty %}
+                        <div class="text-center py-3 text-muted">
+                            No patients found
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Prescriptions -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Recent Prescriptions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for prescription in recent_prescriptions %}
+                        <a href="{% url 'prescription-detail' prescription.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">Prescription #{{ prescription.id }}</h6>
+                                <small>{{ prescription.date|date:"M d, Y" }}</small>
+                            </div>
+                            <p class="mb-1">For: {{ prescription.patient.first_name }} {{ prescription.patient.last_name }}</p>
+                            <small>Medications: {{ prescription.prescriptionmedication_set.count }}</small>
+                        </a>
+                        {% empty %}
+                        <div class="text-center py-3 text-muted">
+                            No prescriptions found
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{% url 'patient-list' %}" class="btn btn-primary">
+                            <i class="bi bi-person-plus"></i> Add New Patient
+                        </a>
+                        <a href="{% url 'prescription-create' %}" class="btn btn-success">
+                            <i class="bi bi-file-earmark-medical"></i> Create Prescription
+                        </a>
+                        <a href="{% url 'medication-list' %}" class="btn btn-info">
+                            <i class="bi bi-search"></i> Search Medications
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Public Landing Page -->
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center py-5">
+            <h1 class="display-4 mb-4">Medical Prescription System</h1>
+            <p class="lead mb-4">
+                Streamline your prescription workflow with our secure, efficient management platform
+                for healthcare providers.
+            </p>
+            <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                <a href="{% url 'template-register' %}" class="btn btn-primary btn-lg px-4 gap-3">
+                    Register as Physician
+                </a>
+                <a href="{% url 'template-login' %}" class="btn btn-outline-secondary btn-lg px-4">
+                    Physician Login
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add any dashboard-specific JavaScript here
+document.addEventListener('DOMContentLoaded', function() {
+    // Example: Make list group items clickable
+    document.querySelectorAll('.list-group-item-action').forEach(item => {
+        item.style.cursor = 'pointer';
+    });
+});
+</script>
+{% endblock %}
