@@ -1,4 +1,5 @@
 # patients/models.py
+from datetime import date
 from django.db import models
 
 class Patient(models.Model):
@@ -20,6 +21,13 @@ class Patient(models.Model):
     gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
     weight = models.IntegerField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def age(self):
+        today = date.today()
+        return today.year - self.birthday.year - (
+            (today.month, today.day) < (self.birthday.month, self.birthday.day)
+        )
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

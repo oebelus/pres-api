@@ -35,7 +35,6 @@
             </div>
         </div>
 
-        <!-- Recent Patients -->
         <div class="col-lg-6 mb-4">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
@@ -49,7 +48,7 @@
                                 <h6 class="mb-1">{{ patient.first_name }} {{ patient.last_name }}</h6>
                                 <small>{{ patient.created_at|timesince }} ago</small>
                             </div>
-                            <p class="mb-1">Age: {{ patient.age }} • {{ patient.gender }}</p>
+                            <p class="mb-1">Age: {{ patient.age }},{{ patient.gender }}</p>
                         </a>
                         {% empty %}
                         <div class="text-center py-3 text-muted">

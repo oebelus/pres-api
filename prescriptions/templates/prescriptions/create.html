@@ -2,23 +2,6 @@
 
 {% block title %}Create New Prescription{% endblock %}
 
-{% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<style>
-    .medication-item {
-        background: #f8f9fa;
-        border-radius: 5px;
-        padding: 15px;
-        margin-bottom: 15px;
-    }
-
-    .remove-medication {
-        cursor: pointer;
-        color: #dc3545;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container">
     <div class="row justify-content-center">
@@ -58,13 +41,11 @@
                                     <div class="row g-3">
                                         <div class="col-md-6">
                                             <label class="form-label">Search Medication</label>
-                                            <select class="form-select medication-search" id="medication-search">
-                                                <option></option>
-                                                {% for med in medications %}
-                                                <option value="{{ med.id }}">{{ med.name }} ({{ med.dosage }}{{
-                                                    med.unity }})</option>
-                                                {% endfor %}
-                                            </select>
+                                            <input type="text" class="form-control" id="medication-search"
+                                                placeholder="Start typing to search...">
+                                            <div id="search-results" class="list-group position-absolute mt-1 shadow-sm w-100"
+                                                style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto;">
+                                            </div>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label">Dosage Instructions</label>
@@ -110,73 +91,159 @@
     </div>
 </div>
 
-<!-- Hidden template for new medications -->
-<div id="medication-template" class="d-none">
-    <div class="medication-item">
-        <input type="hidden" name="medications[]" class="medication-id">
-        <input type="hidden" name="dosage_instructions[]" class="dosage-instruction">
-        <input type="hidden" name="duration_days[]" class="duration-days">
+<template id="medication-template">
+    <div class="medication-item card mb-2">
+        <div class="card-body">
+            <input type="hidden" name="medications[]" class="medication-id">
+            <input type="hidden" name="dosage_instructions[]" class="dosage-instruction">
+            <input type="hidden" name="duration_days[]" class="duration-days">
 
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="mb-0 medication-name"></h6>
-            <span class="remove-medication"><i class="bi bi-trash"></i></span>
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h6 class="mb-0 medication-name"></h6>
+                    <div class="text-muted small medication-details"></div>
+                    <div class="medication-instruction mt-1"></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-medication">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
         </div>
-        <div class="medication-details"></div>
-        <div class="text-muted medication-instruction"></div>
     </div>
-</div>
+</template>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     $(document).ready(function () {
-        // Initialize Select2 for medication search
-        $('.medication-search').select2({
-            placeholder: "Search for medication...",
-            allowClear: true
+        // Track if search results are visible
+        let searchResultsVisible = false;
+
+        // Medication search functionality
+        $('#medication-search').on('input', function () {
+            const searchTerm = $(this).val().trim();
+            const $results = $('#search-results');
+
+            if (searchTerm.length < 2) {
+                $results.hide().empty();
+                searchResultsVisible = false;
+                return;
+            }
+
+            // Make AJAX request to search endpoint
+            $.ajax({
+                url: '/api/medications/search/',
+                data: { q: searchTerm },
+                method: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    $results.empty();
+
+                    if (data.results.length === 0) {
+                        $results.append('<div class="list-group-item">No medications found</div>');
+                    } else {
+                        data.results.forEach(function (med) {
+                            let presentationText = med.presentation ? med.presentation : '';
+                            $results.append(`
+                                <div class="list-group-item search-result" 
+                                    data-id="${med.id}"
+                                    data-name="${med.name}"
+                                    data-dosage="${med.dosage}"
+                                    data-presentation="${presentationText}">
+                                    <strong>${med.name}</strong> - ${med.dosage}
+                                    <small class="text-muted d-block">${presentationText}</small>
+                                </div>
+                            `);
+                        });
+                    }
+                    $results.show();
+                    searchResultsVisible = true;
+                },
+                error: function (xhr, status, error) {
+                    console.error("Search error:", error);
+                    $results.empty().append('<div class="list-group-item text-danger">Error searching medications</div>').show();
+                }
+            });
         });
 
-        // Add medication to the list
-        $('#add-medication').click(function () {
-            const medicationId = $('#medication-search').val();
-            const medicationName = $('#medication-search option:selected').text();
-            const dosageInstruction = $('#dosage-instruction').val();
-            const durationDays = $('#duration-days').val();
+        // Handle clicking outside the search results
+        $(document).on('click', function (e) {
+            if (searchResultsVisible &&
+                !$(e.target).closest('#search-results').length &&
+                !$(e.target).closest('#medication-search').length) {
+                $('#search-results').hide();
+                searchResultsVisible = false;
+            }
+        });
 
-            if (!medicationId) {
-                alert('Please select a medication');
+        // Handle medication selection
+        $('#search-results').on('click', '.search-result', function () {
+            const med = {
+                id: $(this).data('id'),
+                name: $(this).data('name'),
+                dosage: $(this).data('dosage'),
+                presentation: $(this).data('presentation')
+            };
+
+            $('#medication-search').val(med.name);
+            $('#search-results').hide();
+            searchResultsVisible = false;
+
+            // Store selected medication data
+            $('#medication-search').data('selected-med', med);
+        });
+
+        // Add medication to prescription
+        $('#add-medication').click(function () {
+            const med = $('#medication-search').data('selected-med');
+            const dosage = $('#dosage-instruction').val().trim();
+            const duration = $('#duration-days').val();
+
+            if (!med || !med.id) {
+                alert('Please select a medication first');
+                return;
+            }
+
+            if (!dosage) {
+                alert('Please enter dosage instructions');
+                return;
+            }
+
+            if (!duration || duration < 1) {
+                alert('Please enter a valid duration');
                 return;
             }
 
             // Create new medication item from template
-            const newItem = $('#medication-template').clone().removeClass('d-none').removeAttr('id');
+            const $newItem = $('#medication-template').contents().clone();
 
             // Populate data
-            newItem.find('.medication-id').val(medicationId);
-            newItem.find('.medication-name').text(medicationName);
-            newItem.find('.dosage-instruction').val(dosageInstruction);
-            newItem.find('.duration-days').val(durationDays);
-            newItem.find('.medication-instruction').text(dosageInstruction + ' for ' + durationDays + ' days');
+            $newItem.find('.medication-id').val(med.id);
+            $newItem.find('.medication-name').text(med.name);
+            $newItem.find('.medication-details').text(`${med.dosage} ${med.presentation ? '- ' + med.presentation : ''}`);
+            $newItem.find('.dosage-instruction').val(dosage);
+            $newItem.find('.duration-days').val(duration);
+            $newItem.find('.medication-instruction').text(`${dosage} for ${duration} days`);
 
             // Add remove functionality
-            newItem.find('.remove-medication').click(function () {
+            $newItem.find('.remove-medication').click(function () {
                 $(this).closest('.medication-item').remove();
             });
 
             // Add to container
-            $('#medications-container').append(newItem);
+            $('#medications-container').append($newItem);
 
             // Clear form
-            $('#medication-search').val(null).trigger('change');
+            $('#medication-search').val('').removeData('selected-med');
             $('#dosage-instruction').val('');
             $('#duration-days').val('7');
         });
 
-        // Form submission
-        $('#prescription-form').submit(function () {
+        // Form validation
+        $('#prescription-form').submit(function (e) {
             if ($('#medications-container').children().length === 0) {
+                e.preventDefault();
                 alert('Please add at least one medication');
                 return false;
             }

@@ -1,0 +1,51 @@
+<!-- medications/templates/medications/detail.html -->
+{% extends 'base.html' %}
+
+{% block title %}{{ medication.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h3>{{ medication.name }}</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Basic Information</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Dosage:</strong> {{ medication.dosage }}</li>
+                        <li class="list-group-item"><strong>Manufacturer:</strong> {{ medication.distributor }}</li>
+                        <li class="list-group-item"><strong>ATC Code:</strong> {{ medication.atc_code }}</li>
+                        <li class="list-group-item"><strong>Status:</strong> {{ medication.status }}</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>Pricing</h5>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Public Price:</strong> {{
+                            medication.public_price | default:"-" }} MAD</li>
+                        <li class="list-group-item"><strong>Hospital Price:</strong> {{
+                            medication.hospital_price|default:"-" }} MAD</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5>Composition</h5>
+                    <p>{{ medication.composition|default:"No composition information available" }}</p>
+
+                    <h5>Indications</h5>
+                    <p>{{ medication.indication|default:"No indication information available" }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer text-end">
+            <a href="{% url 'medication-list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

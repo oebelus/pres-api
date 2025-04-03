@@ -1,5 +1,8 @@
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
 from django.views.generic import ListView, DetailView, CreateView
+from django.contrib.auth.mixins import LoginRequiredMixin
 from rest_framework import generics, permissions
 from django.urls import reverse_lazy
 from .forms import PatientCreateForm
@@ -9,17 +12,24 @@ from .serializers import PatientSerializer
 
 class PatientListCreateView(generics.ListCreateAPIView):
     serializer_class = PatientSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication, SessionAuthentication]
+    
     def get_queryset(self):
-        # Only show patients associated th the current physician
         return self.request.user.patients.all()
-
+    
     def perform_create(self, serializer):
-        # Automatically associate the current physician with the new patient
         patient = serializer.save()
         patient.physicians.add(self.request.user)
-        patient.save()
+
+class PatientRetrieveView(generics.RetrieveAPIView):
+    serializer_class = PatientSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication, SessionAuthentication]
+    lookup_field = 'id'
+    
+    def get_queryset(self):
+        return self.request.user.patients.all()
 
 class PatientRetrieveView(generics.RetrieveAPIView):
     serializer_class = PatientSerializer
@@ -37,29 +47,36 @@ class PatientRetrieveView(generics.RetrieveAPIView):
         return patient
     
 
-class PatientTemplateListView(ListView):
+class PatientTemplateListView(LoginRequiredMixin, ListView):
     model = Patient
     template_name = 'patients/list.html'
     context_object_name = 'patients'
     
     def get_queryset(self):
-        return self.request.user.patients.all()
+        return self.request.user.patients.all().order_by('last_name')
     
-class PatientTemplateDetailView(DetailView):
+class PatientTemplateDetailView(LoginRequiredMixin, DetailView):
     model = Patient
     template_name = 'patients/detail.html'
     context_object_name = 'patient'
     
     def get_queryset(self):
         return self.request.user.patients.all()
+
+class PatientTemplateDetailView(LoginRequiredMixin, DetailView):
+    model = Patient
+    template_name = 'patients/detail.html'
+    context_object_name = 'patient'
     
-class PatientCreateView(CreateView):
+    def get_queryset(self):
+        return self.request.user.patients.all()
+
+class PatientCreateView(LoginRequiredMixin, CreateView):
     form_class = PatientCreateForm
     template_name = 'patients/create.html'
     success_url = reverse_lazy('patient-list')
-
+    
     def form_valid(self, form):
-        # Automatically associate the current physician
         patient = form.save()
         patient.physicians.add(self.request.user)
         return super().form_valid(form)

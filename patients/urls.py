@@ -1,12 +1,19 @@
 from django.urls import path
-
-from .views import PatientCreateView, PatientListCreateView, PatientRetrieveView, PatientTemplateDetailView, PatientTemplateListView
+from .views import (
+    PatientListCreateView,
+    PatientRetrieveView,
+    PatientTemplateListView,
+    PatientTemplateDetailView,
+    PatientCreateView
+)
 
 urlpatterns = [
-    path('patients/', PatientTemplateListView.as_view(), name='patient-list'),
-    path('patients/<int:pk>/', PatientTemplateDetailView.as_view(), name='patient-detail'),
-    path('patients/create/', PatientCreateView.as_view(), name='patient-create'), 
+    # API endpoints
+    path('api/patients/', PatientListCreateView.as_view(), name='patient-api-list'),
+    path('api/patients/<int:id>/', PatientRetrieveView.as_view(), name='patient-api-detail'),
     
-    path('api/patients/', PatientListCreateView.as_view(), name='patient-list-create'),
-    path('api/patients/<int:id>/', PatientRetrieveView.as_view(), name='patient-retrieve'),
+    # Template views
+    path('patients/', PatientTemplateListView.as_view(), name='patient-list'),
+    path('patients/create/', PatientCreateView.as_view(), name='patient-create'),
+    path('patients/<int:pk>/', PatientTemplateDetailView.as_view(), name='patient-detail'),
 ]

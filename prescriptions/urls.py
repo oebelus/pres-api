@@ -1,12 +1,17 @@
+# prescriptions/urls.py
 from django.urls import path
-
-from .views import PrescriptionListView, PrescriptionDetailView, PrescriptionTemplateCreateView, PrescriptionTemplateDetailView, PrescriptionTemplateListView
+from .views import (
+    PrescriptionTemplateDetailView,
+    PrescriptionListView,
+    PrescriptionTemplateCreateView,
+    PrescriptionUpdateView,
+    medication_search_api
+)
 
 urlpatterns = [
-    path('', PrescriptionTemplateListView.as_view(), name='prescription-list'),
-    path('<int:pk>/', PrescriptionTemplateDetailView.as_view(), name='prescription-detail'),
-    path('create/', PrescriptionTemplateCreateView.as_view(), name='prescription-create'),
-    
-    path('api/prescriptions/', PrescriptionListView.as_view(), name='prescription-list-api'),
-    path('api/prescriptions/<int:pk>/', PrescriptionDetailView.as_view(), name='prescription-detail-api'),
+    path('prescriptions/', PrescriptionListView.as_view(), name='prescription-list'),
+    path('prescriptions/create/', PrescriptionTemplateCreateView.as_view(), name='prescription-create'),
+    path('prescriptions/<int:pk>/edit/', PrescriptionUpdateView.as_view(), name='prescription-edit'),
+    path('prescriptions/<int:pk>/', PrescriptionTemplateDetailView.as_view(), name='prescription-detail'),
+    path('api/medications/search/', medication_search_api, name='medication-search-api'),
 ]

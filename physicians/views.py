@@ -1,6 +1,7 @@
 from django.views.generic import TemplateView, CreateView, UpdateView
 from django.contrib.auth.views import LoginView as DjangoLoginView
 from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth.views import LogoutView as DjangoLogoutView
 from rest_framework.validators import ValidationError
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
@@ -89,6 +90,9 @@ class HomeView(TemplateView):
             
             context['medications_count'] = Medication.objects.count()
             
+            context['recent_patients'] = Patient.objects.order_by('-created_at')[:5]
+            context['recent_prescriptions'] = Prescription.objects.order_by('-date')[:5]
+            
         return context
 
 class PhysicianLoginView(DjangoLoginView):
@@ -103,8 +107,13 @@ class PhysicianRegisterView(CreateView):
     form_class = PhysicianRegistrationForm
     success_url = reverse_lazy('template-login')
 
-class PhysicianLogoutView(LogoutView):
+class PhysicianLogoutView(DjangoLogoutView):
     next_page = reverse_lazy('home')
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Clear session data
+        request.session.flush()
+        return super().dispatch(request, *args, **kwargs)
 
 class PhysicianProfileView(UpdateView):
     template_name = 'physician/profile.html'

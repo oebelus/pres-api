@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_filters',
     'rest_framework',
     'prescriptions',
     'medications',
@@ -144,3 +145,5 @@ LOGIN_REDIRECT_URL = 'template-profile'
 LOGOUT_REDIRECT_URL = 'home'
 
 AUTH_USER_MODEL = 'physicians.Physician'
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
