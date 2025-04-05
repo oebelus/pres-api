@@ -62,6 +62,10 @@
             <a href="{% url 'prescription-list' %}" class="btn btn-secondary">
                 <i class="bi bi-arrow-left"></i> Back to List
             </a>
+            <!-- edit prescription -->
+            <a href="{% url 'prescription-edit' prescription.id %}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
         </div>
     </div>
 </div>

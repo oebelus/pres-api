@@ -90,8 +90,8 @@ class HomeView(TemplateView):
             
             context['medications_count'] = Medication.objects.count()
             
-            context['recent_patients'] = Patient.objects.order_by('-created_at')[:5]
-            context['recent_prescriptions'] = Prescription.objects.order_by('-date')[:5]
+            context['recent_patients'] = Patient.objects.filter(physicians=self.request.user).order_by('-created_at')[:5]
+            context['recent_prescriptions'] = Prescription.objects.filter(physician=self.request.user).order_by('-date')[:5]
             
         return context
 

@@ -3,21 +3,274 @@
 {% block title %}Edit Prescription #{{ object.id }}{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="card">
-        <div class="card-header bg-warning text-white">
-            <h3>Edit Prescription #{{ object.id }}</h3>
-        </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                    <a href="{% url 'prescription-list' %}" class="btn btn-secondary">Cancel</a>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Edit Prescription #{{ object.id }}</h4>
                 </div>
-            </form>
+                <div class="card-body">
+                    <form method="post" id="prescription-form">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <h5>Patient Information</h5>
+                            <div class="mb-3">
+                                {{ form.patient.label_tag }}
+                                {{ form.patient }}
+                                {% if form.patient.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.patient.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5>Medications</h5>
+                            <div id="medications-container">
+                                {% for med in existing_medications %}
+                                <div class="medication-item card mb-2">
+                                    <div class="card-body">
+                                        <input type="hidden" name="medications[]" value="{{ med.medication.id }}">
+                                        <input type="hidden" name="dosage_instructions[]"
+                                            value="{{ med.dosage_instruction }}">
+                                        <input type="hidden" name="duration_days[]" value="{{ med.duration_days }}">
+
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <h6 class="mb-0">{{ med.medication.name }}</h6>
+                                                <div class="text-muted small">
+                                                    {{ med.medication.dosage }} {% if med.medication.presentation %} - {{ med.medication.presentation }} {% endif %}
+                                                </div>
+                                                <div class="medication-instruction mt-1">
+                                                    {{ med.dosage_instruction }} for {{ med.duration_days }} days
+                                                </div>
+                                            </div>
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-danger remove-medication">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Search Medication</label>
+                                            <input type="text" class="form-control" id="medication-search"
+                                                placeholder="Start typing to search...">
+                                            <div id="search-results"
+                                                class="list-group position-absolute mt-1 shadow-sm w-100"
+                                                style="display: none; z-index: 1000; max-height: 300px; overflow-y: auto;">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Dosage Instructions</label>
+                                            <input type="text" class="form-control" id="dosage-instruction"
+                                                placeholder="Take 1 tablet daily">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label class="form-label">Duration (days)</label>
+                                            <input type="number" class="form-control" id="duration-days" min="1"
+                                                value="7">
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-primary mt-3" id="add-medication">
+                                        <i class="bi bi-plus-circle"></i> Add Medication
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5>Additional Notes</h5>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.notes.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Update Prescription
+                            </button>
+                            <a href="{% url 'prescription-list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<template id="medication-template">
+    <div class="medication-item card mb-2">
+        <div class="card-body">
+            <input type="hidden" name="medications[]" class="medication-id">
+            <input type="hidden" name="dosage_instructions[]" class="dosage-instruction">
+            <input type="hidden" name="duration_days[]" class="duration-days">
+
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h6 class="mb-0 medication-name"></h6>
+                    <div class="text-muted small medication-details"></div>
+                    <div class="medication-instruction mt-1"></div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-medication">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // Track if search results are visible
+        let searchResultsVisible = false;
+
+        // Medication search functionality
+        $('#medication-search').on('input', function () {
+            const searchTerm = $(this).val().trim();
+            const $results = $('#search-results');
+
+            if (searchTerm.length < 2) {
+                $results.hide().empty();
+                searchResultsVisible = false;
+                return;
+            }
+
+            // Make AJAX request to search endpoint
+            $.ajax({
+                url: '/api/medications/search/',
+                data: { q: searchTerm },
+                method: 'GET',
+                dataType: 'json',
+                success: function (data) {
+                    $results.empty();
+
+                    if (data.results.length === 0) {
+                        $results.append('<div class="list-group-item">No medications found</div>');
+                    } else {
+                        data.results.forEach(function (med) {
+                            let presentationText = med.presentation ? med.presentation : '';
+                            $results.append(`
+                                <div class="list-group-item search-result" 
+                                    data-id="${med.id}"
+                                    data-name="${med.name}"
+                                    data-dosage="${med.dosage}"
+                                    data-presentation="${presentationText}">
+                                    <strong>${med.name}</strong> - ${med.dosage}
+                                    <small class="text-muted d-block">${presentationText}</small>
+                                </div>
+                            `);
+                        });
+                    }
+                    $results.show();
+                    searchResultsVisible = true;
+                },
+                error: function (xhr, status, error) {
+                    console.error("Search error:", error);
+                    $results.empty().append('<div class="list-group-item text-danger">Error searching medications</div>').show();
+                }
+            });
+        });
+
+        // Handle clicking outside the search results
+        $(document).on('click', function (e) {
+            if (searchResultsVisible &&
+                !$(e.target).closest('#search-results').length &&
+                !$(e.target).closest('#medication-search').length) {
+                $('#search-results').hide();
+                searchResultsVisible = false;
+            }
+        });
+
+        // Handle medication selection
+        $('#search-results').on('click', '.search-result', function () {
+            const med = {
+                id: $(this).data('id'),
+                name: $(this).data('name'),
+                dosage: $(this).data('dosage'),
+                presentation: $(this).data('presentation')
+            };
+
+            $('#medication-search').val(med.name);
+            $('#search-results').hide();
+            searchResultsVisible = false;
+
+            // Store selected medication data
+            $('#medication-search').data('selected-med', med);
+        });
+
+        // Add medication to prescription
+        $('#add-medication').click(function () {
+            const med = $('#medication-search').data('selected-med');
+            const dosage = $('#dosage-instruction').val().trim();
+            const duration = $('#duration-days').val();
+
+            if (!med || !med.id) {
+                alert('Please select a medication first');
+                return;
+            }
+
+            if (!dosage) {
+                alert('Please enter dosage instructions');
+                return;
+            }
+
+            if (!duration || duration < 1) {
+                alert('Please enter a valid duration');
+                return;
+            }
+
+            // Create new medication item from template
+            const $newItem = $('#medication-template').contents().clone();
+
+            // Populate data
+            $newItem.find('.medication-id').val(med.id);
+            $newItem.find('.medication-name').text(med.name);
+            $newItem.find('.medication-details').text(`${med.dosage} ${med.presentation ? '- ' + med.presentation : ''}`);
+            $newItem.find('.dosage-instruction').val(dosage);
+            $newItem.find('.duration-days').val(duration);
+            $newItem.find('.medication-instruction').text(`${dosage} for ${duration} days`);
+
+            // Add remove functionality
+            $newItem.find('.remove-medication').click(function () {
+                $(this).closest('.medication-item').remove();
+            });
+
+            // Add to container
+            $('#medications-container').append($newItem);
+
+            // Clear form
+            $('#medication-search').val('').removeData('selected-med');
+            $('#dosage-instruction').val('');
+            $('#duration-days').val('7');
+        });
+
+        // Form validation
+        $('#prescription-form').submit(function (e) {
+            if ($('#medications-container').children().length === 0) {
+                e.preventDefault();
+                alert('Please add at least one medication');
+                return false;
+            }
+            return true;
+        });
+    });
+</script>
 {% endblock %}

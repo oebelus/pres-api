@@ -90,7 +90,10 @@
                     <tbody>
                         {% for prescription in prescriptions %}
                         <tr>
-                            <td>#{{ prescription.id }}</td>
+                            <td>
+                                <a href="{% url 'prescription-detail' prescription.id %}">
+                                    #{{ prescription.id }}
+                            </td>
                             <td>
                                 <a href="{% url 'patient-detail' prescription.patient.id %}">
                                     {{ prescription.patient.first_name }} {{ prescription.patient.last_name }}

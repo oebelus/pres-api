@@ -1,3 +1,4 @@
+from django.forms import formset_factory
 from django.http import Http404, JsonResponse
 from django.views.generic import DetailView, CreateView
 from django_filters.views import FilterView
@@ -16,12 +17,11 @@ from django.views.generic import UpdateView
 from .filters import PrescriptionFilter
 
 from .serializers import PrescriptionSerializer
-from .forms import PrescriptionCreateForm
+from .forms import MedicationSelectionForm, PrescriptionCreateForm
 from .models import Prescription, PrescriptionMedication
 
 @require_GET
 def medication_search_api(request):
-    """API endpoint for searching medications."""
     search_term = request.GET.get('q', '').strip()
     
     if len(search_term) < 2:
@@ -60,11 +60,57 @@ class PrescriptionUpdateView(UpdateView):
         return reverse('prescription-list')
     
     def get_queryset(self):
-        queryset = super().get_queryset()
-        if self.request.user.is_physician:
-            return queryset.filter(physician=self.request.user.physician)
-        return queryset.none()
+        return super().get_queryset().filter(physician=self.request.user)
     
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['existing_medications'] = self.object.prescriptionmedication_set.all()
+        return context
+    
+    def form_valid(self, form):
+        context = self.get_context_data()
+        medication_formset = context['medication_formset']
+        
+        if medication_formset.is_valid():
+            self.object = form.save()
+            
+            # Clear existing medications
+            self.object.prescriptionmedication_set.all().delete()
+            
+            # Save updated medications
+            for medication_form in medication_formset:
+                if medication_form.cleaned_data:
+                    PrescriptionMedication.objects.create(
+                        prescription=self.object,
+                        medication=medication_form.cleaned_data['medication'],
+                        dosage_instruction=medication_form.cleaned_data['dosage_instruction'],
+                        duration_days=medication_form.cleaned_data['duration_days']
+                    )
+            
+            # Handle new medication if added
+            new_medication_form = MedicationSelectionForm(
+                self.request.POST,
+                prefix='new_medication'
+            )
+            if new_medication_form.is_valid() and new_medication_form.has_changed():
+                PrescriptionMedication.objects.create(
+                    prescription=self.object,
+                    medication=new_medication_form.cleaned_data['medication'],
+                    dosage_instruction=new_medication_form.cleaned_data['dosage_instruction'],
+                    duration_days=new_medication_form.cleaned_data['duration_days']
+                )
+            
+            return super().form_valid(form)
+        
+        return self.render_to_response(
+            self.get_context_data(form=form)
+        )
+        
 class PrescriptionListView(FilterView):
     model = Prescription
     template_name = 'prescriptions/list.html'
@@ -73,7 +119,6 @@ class PrescriptionListView(FilterView):
     paginate_by = 20
     
     def get_queryset(self):
-        # Since Physician is the User, we can filter directly
         return Prescription.objects.filter(
             physician=self.request.user
         ).select_related('patient').order_by('-date')
@@ -97,12 +142,8 @@ class PrescriptionTemplateDetailView(DetailView):
         queryset = super().get_queryset()
         user = self.request.user
         
-        if hasattr(user, 'physician'):
-            return queryset.filter(physician=user)
-        elif hasattr(user, 'patient'):
-            return queryset.filter(patient=user.patient)
-        return queryset.none()
-
+        return queryset.filter(physician=user)
+        
     def get(self, request, *args, **kwargs):
         try:
             return super().get(request, *args, **kwargs)
